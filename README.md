@@ -6,6 +6,14 @@
 - Web interface + REST API
 - Download summaries as text files
 
+- 
+## Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/document-summarizer.git
+   cd document-summarizer
+
 ## Quick Start
 ```bash
 # Create and activate virtual environment
