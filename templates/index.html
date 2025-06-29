@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Document Summarizer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #4a90e2;
+      --secondary-color: #f5f7fa;
+      --text-color: #333;
+      --card-bg: #ffffff;
+      --border-radius: 12px;
+      --shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+      --processing-color: #8e44ad;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--secondary-color);
+      color: var(--text-color);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      background-color: var(--card-bg);
+      padding: 30px;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      max-width: 600px;
+      width: 100%;
+    }
+
+    h1 {
+      font-size: 26px;
+      margin-bottom: 20px;
+      text-align: center;
+      color: var(--primary-color);
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    input[type="file"],
+    input[type="number"] {
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    label {
+      font-weight: 600;
+    }
+
+    button {
+      padding: 12px;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    button:hover {
+      background-color: #357abd;
+    }
+
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+
+    .summary {
+      margin-top: 25px;
+      padding: 20px;
+      background-color: #f0f4f8;
+      border: 1px solid #dde3ea;
+      border-radius: var(--border-radius);
+    }
+
+    .summary h2 {
+      margin-bottom: 10px;
+    }
+
+    .summary a {
+      display: inline-block;
+      margin-top: 15px;
+      padding: 10px 15px;
+      background-color: var(--primary-color);
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      transition: background-color 0.3s ease;
+    }
+
+    .summary a:hover {
+      background-color: #357abd;
+    }
+
+    .progress-container {
+      display: none;
+      margin-top: 20px;
+      width: 100%;
+    }
+
+    .progress-bar {
+      height: 8px;
+      background-color: #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .progress {
+      height: 100%;
+      background-color: var(--primary-color);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .progress-text {
+      text-align: center;
+      font-size: 14px;
+      color: #666;
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+      display: none;
+    }
+
+    .processing-container {
+      display: none;
+      margin-top: 15px;
+      text-align: center;
+    }
+
+    .processing-spinner {
+      width: 30px;
+      height: 30px;
+      border: 4px solid rgba(142, 68, 173, 0.2);
+      border-radius: 50%;
+      border-top-color: var(--processing-color);
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px;
+    }
+
+    .processing-text {
+      color: var(--processing-color);
+      font-weight: 600;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 20px;
+      }
+
+      h1 {
+        font-size: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Document Summarizer</h1>
+    <form id="uploadForm" method="POST" enctype="multipart/form-data">
+      <label for="file">Upload Document (PDF or DOCX):</label>
+      <input type="file" name="file" id="file" accept=".pdf,.docx" required />
+
+      <label for="summary_percent">Summary Length (% of original text):</label>
+      <input type="number" id="summary_percent" name="summary_percent" min="1" max="100" value="10" required />
+
+      <button type="submit" id="submitBtn">
+        <span id="btnText">Upload & Summarize</span>
+        <div class="spinner" id="spinner"></div>
+      </button>
+    </form>
+
+    <div class="progress-container" id="progressContainer">
+      <div class="progress-bar">
+        <div class="progress" id="progressBar"></div>
+      </div>
+      <div class="progress-text" id="progressText">Uploading: 0%</div>
+    </div>
+
+    <div class="processing-container" id="processingContainer">
+      <div class="processing-spinner"></div>
+      <div class="processing-text" id="processingText">Processing document and generating summary...</div>
+    </div>
+
+    {% if summary %}
+    <div class="summary">
+      <h2>Summary:</h2>
+      <p>{{ summary }}</p>
+      <a href="{{ url_for('download', filename=download_link) }}">⬇ Download Summary</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <script>
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const form = e.target;
+      const fileInput = document.getElementById('file');
+      const submitBtn = document.getElementById('submitBtn');
+      const btnText = document.getElementById('btnText');
+      const spinner = document.getElementById('spinner');
+      const progressContainer = document.getElementById('progressContainer');
+      const progressBar = document.getElementById('progressBar');
+      const progressText = document.getElementById('progressText');
+      const processingContainer = document.getElementById('processingContainer');
+      const processingText = document.getElementById('processingText');
+
+      if (fileInput.files.length > 0) {
+        // Show loading state
+        submitBtn.disabled = true;
+        btnText.textContent = 'Processing...';
+        spinner.style.display = 'block';
+        progressContainer.style.display = 'block';
+
+        // Simulate upload progress
+        let progress = 0;
+        const uploadInterval = setInterval(() => {
+          progress += Math.random() * 10;
+          if (progress >= 100) {
+            progress = 100;
+            clearInterval(uploadInterval);
+            progressText.textContent = 'Upload complete!';
+            
+            // Show processing state
+            progressBar.style.backgroundColor = 'var(--processing-color)';
+            processingContainer.style.display = 'block';
+            
+            // Simulate processing delay
+            setTimeout(() => {
+              // Submit the form after processing is "complete"
+              form.submit();
+            }, 2000);
+          } else {
+            progressBar.style.width = progress + '%';
+            progressText.textContent = 'Uploading: ' + Math.round(progress) + '%';
+          }
+        }, 300);
+
+        // For actual implementation with fetch/XHR:
+        /*
+        const formData = new FormData(form);
+        const xhr = new XMLHttpRequest();
+        
+        xhr.upload.addEventListener('progress', function(e) {
+          if (e.lengthComputable) {
+            const percentComplete = (e.loaded / e.total) * 100;
+            progressBar.style.width = percentComplete + '%';
+            progressText.textContent = 'Uploading: ' + Math.round(percentComplete) + '%';
+            
+            if (percentComplete >= 100) {
+              progressText.textContent = 'Upload complete!';
+              processingContainer.style.display = 'block';
+            }
+          }
+        });
+        
+        xhr.addEventListener('load', function() {
+          // Handle response
+        });
+        
+        xhr.open('POST', form.action);
+        xhr.send(formData);
+        */
+      }
+    });
+  </script>
+</body>
+</html>

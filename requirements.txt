@@ -1,0 +1,6 @@
+flask
+PyPDF2
+python-docx
+transformers
+torch
+concurrent-log-handler
